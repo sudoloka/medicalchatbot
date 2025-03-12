@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical AI Chatbot</title>
+    <style>
+        /* Global Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 60%;
+            max-width: 800px;
+            background: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            margin-top: 20px;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin;
+            scrollbar-color: #007bff transparent;
+        }
+
+        .chat-bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-bubble {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .bot-bubble {
+            background-color: #333;
+            color: #ddd;
+            align-self: flex-start;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #444;
+            background: #1e1e1e;
+        }
+
+        textarea {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            resize: none;
+            height: 50px;
+            font-size: 16px;
+            background: #333;
+            color: white;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .sources {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+            padding: 8px;
+            background: #222;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .toggle-sources {
+            cursor: pointer;
+            color: #00bcd4;
+            font-size: 14px;
+        }
+
+        .toggle-sources:hover {
+            text-decoration: underline;
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+        }
+
+        .theme-toggle:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox">
+            <div class="bot-bubble chat-bubble">👋 Hello! Ask me anything about medical topics.</div>
+        </div>
+        <div class="input-container">
+            <textarea id="userQuery" placeholder="Type your question..."></textarea>
+            <button onclick="askQuestion()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function askQuestion() {
+            const userQuery = document.getElementById("userQuery").value.trim();
+            if (!userQuery) {
+                alert("Please enter a question.");
+                return;
+            }
+
+            const chatBox = document.getElementById("chatBox");
+
+            // Display user message
+            const userBubble = document.createElement("div");
+            userBubble.className = "user-bubble chat-bubble";
+            userBubble.innerText = userQuery;
+            chatBox.appendChild(userBubble);
+            document.getElementById("userQuery").value = "";
+
+            // Typing effect
+            const botBubble = document.createElement("div");
+            botBubble.className = "bot-bubble chat-bubble";
+            botBubble.innerHTML = "⏳ Thinking...";
+            chatBox.appendChild(botBubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Fetch AI response
+            fetch("/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: userQuery })
+            })
+            .then(response => response.json())
+            .then(data => {
+                botBubble.innerText = data.result;
+
+                if (data.sources.length > 0) {
+                    const sourceToggle = document.createElement("div");
+                    sourceToggle.className = "toggle-sources";
+                    sourceToggle.innerText = "🔗 View Sources";
+                    sourceToggle.onclick = function() {
+                        sourceDiv.style.display = sourceDiv.style.display === "none" ? "block" : "none";
+                    };
+
+                    const sourceDiv = document.createElement("div");
+                    sourceDiv.className = "sources";
+                    sourceDiv.style.display = "none";
+                    sourceDiv.innerHTML = data.sources.map(src => 
+                        `<b>📖 ${src.source}</b> (Page ${src.page}): ${src.content.substring(0, 150)}...`
+                    ).join("<br>");
+
+                    botBubble.appendChild(sourceToggle);
+                    botBubble.appendChild(sourceDiv);
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => botBubble.innerText = "❌ Error fetching response.");
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            body.style.backgroundColor = body.style.backgroundColor === "white" ? "#121212" : "white";
+            body.style.color = body.style.color === "black" ? "white" : "black";
+        }
+    </script>
+</body>
+</html>
