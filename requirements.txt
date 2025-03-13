@@ -1,0 +1,7 @@
+flask
+python-dotenv
+langchain-community
+langchain-pinecone
+pinecone-client
+sentence-transformers
+gunicorn  # Required for production deployment
